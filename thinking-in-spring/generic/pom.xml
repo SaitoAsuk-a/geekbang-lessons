@@ -12,8 +12,8 @@
 
     <artifactId>generic</artifactId>
 
-    <properties>
+<!--    <properties>
         <spring.version>4.3.26.RELEASE</spring.version>
-    </properties>
+    </properties>-->
 
 </project>

@@ -18,6 +18,9 @@ package org.geekbang.thinking.in.spring.aop.overview;
 
 import org.springframework.context.annotation.Configuration;
 
+import java.util.*;
+import java.util.concurrent.ArrayBlockingQueue;
+
 /**
  * 默认 {@link EchoService} 实现
  *
@@ -27,9 +30,33 @@ import org.springframework.context.annotation.Configuration;
 @Configuration // @Configuration 需要 @ComponentScan -> ConfigurationClassPostProcessor
 // CGLIB 代理对象
 public class DefaultEchoService implements EchoService {
+    private static Map<Integer, Integer> passCountMap = new HashMap<>();
 
     @Override
     public String echo(String message) {
+        passCountMap.put(1, null);
+        passCountMap.put(1, getHashMapValueOrDefault(passCountMap, 1, 0) + 1);
+        System.out.println("passCountMap = " + passCountMap);
+        passCountMap.remove(1);
+        passCountMap.put(1, getHashMapValueOrDefault(passCountMap, 1, 0) + 1);
+        System.out.println("passCountMap = " + passCountMap);
         return "[ECHO] " + message;
+    }
+
+
+    public static void main(String[] args) {
+        PriorityQueue<Integer> integers = new PriorityQueue<>(100, new Comparator<Integer>() {
+            @Override
+            public int compare(Integer o1, Integer o2) {
+                return o1 - o2;
+            }
+        });
+
+
+    }
+
+    public <K, V> V getHashMapValueOrDefault(Map<K, V> hashMap, K key, V defaultValue) {
+        V v = hashMap.get(key);
+        return v == null ? defaultValue : v;
     }
 }
