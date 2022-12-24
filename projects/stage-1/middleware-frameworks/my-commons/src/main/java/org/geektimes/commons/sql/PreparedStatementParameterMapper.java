@@ -17,20 +17,16 @@
 package org.geektimes.commons.sql;
 
 import org.geektimes.commons.lang.Prioritized;
-import org.geektimes.commons.reflect.util.ClassUtils;
-import org.geektimes.commons.reflect.util.TypeUtils;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.ServiceLoader;
-import java.util.stream.Collectors;
 
 import static java.util.ServiceLoader.load;
 import static java.util.stream.Collectors.toList;
 import static org.geektimes.commons.function.Streams.stream;
 import static org.geektimes.commons.reflect.util.ClassUtils.isAssignableFrom;
-import static org.geektimes.commons.reflect.util.TypeUtils.findActualTypeArgument;
+import static org.geektimes.commons.reflect.util.TypeUtils.findActualTypeArgumentClass;
 
 /**
  * The Mapper interface for {@link PreparedStatement}'s parameter
@@ -46,7 +42,7 @@ public interface PreparedStatementParameterMapper<T> extends Prioritized {
             .collect(toList());
 
     default Class<T> getParameterType() {
-        return findActualTypeArgument(this.getClass(), PreparedStatementParameterMapper.class, 0);
+        return findActualTypeArgumentClass(this.getClass(), PreparedStatementParameterMapper.class, 0);
     }
 
     default boolean matches(Class<?> parameterType) {

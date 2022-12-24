@@ -21,6 +21,7 @@ import org.eclipse.microprofile.faulttolerance.exceptions.CircuitBreakerOpenExce
 import org.geektimes.commons.util.TimeUtils;
 import org.geektimes.interceptor.AnnotatedInterceptor;
 
+import javax.annotation.Priority;
 import javax.interceptor.Interceptor;
 import javax.interceptor.InvocationContext;
 import java.util.Arrays;
@@ -29,7 +30,9 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
+import static javax.interceptor.Interceptor.Priority.LIBRARY_BEFORE;
 import static org.geektimes.commons.reflect.util.ClassUtils.isDerived;
+import static org.geektimes.microprofile.faulttolerance.CircuitBreakerInterceptor.CIRCUIT_BREAKER_PRIORITY;
 
 /**
  * The interceptor implementation for the annotation {@link CircuitBreaker} of
@@ -40,17 +43,19 @@ import static org.geektimes.commons.reflect.util.ClassUtils.isDerived;
  */
 @CircuitBreaker
 @Interceptor
+@Priority(CIRCUIT_BREAKER_PRIORITY)
 public class CircuitBreakerInterceptor extends AnnotatedInterceptor<CircuitBreaker> {
+
+    public static final int CIRCUIT_BREAKER_PRIORITY = LIBRARY_BEFORE + 100;
 
     private final ConcurrentMap<CircuitBreaker, CountableSlidingWindow> slidingWindowsCache = new ConcurrentHashMap<>();
 
     public CircuitBreakerInterceptor() {
         super();
-        setPriority(0);
     }
 
     @Override
-    protected Object execute(InvocationContext context, CircuitBreaker circuitBreaker) throws Throwable {
+    protected Object intercept(InvocationContext context, CircuitBreaker circuitBreaker) throws Throwable {
         CountableSlidingWindow slidingWindow = getSlidingWindow(circuitBreaker);
         if (slidingWindow.isOpen()) {
             throw new CircuitBreakerOpenException(slidingWindow.toString());
@@ -70,7 +75,8 @@ public class CircuitBreakerInterceptor extends AnnotatedInterceptor<CircuitBreak
     }
 
     CountableSlidingWindow getSlidingWindow(CircuitBreaker circuitBreaker) {
-        return slidingWindowsCache.computeIfAbsent(circuitBreaker, key -> new CountableSlidingWindow(key));
+        return slidingWindowsCache.computeIfAbsent(circuitBreaker, key -> new CountableSlidingWindow(key))
+                .calculateStatus();
     }
 
     static class CountableSlidingWindow {
@@ -129,14 +135,12 @@ public class CircuitBreakerInterceptor extends AnnotatedInterceptor<CircuitBreak
                 successTrials.increment();
             }
             requests.increment();
-            calculateStatus();
             return this;
         }
 
         private CountableSlidingWindow failure(Throwable failure) {
             if (isOnFailure(failure)) {
                 failures.increment();
-                calculateStatus();
             }
             requests.increment();
             return this;
@@ -147,7 +151,7 @@ public class CircuitBreakerInterceptor extends AnnotatedInterceptor<CircuitBreak
             return isDerived(failureClass, appliedFailures) && !isDerived(failureClass, ignoredFailures);
         }
 
-        private void calculateStatus() {
+        private CountableSlidingWindow calculateStatus() {
             if (isClosed()) {
 
                 // Status : CLOSED -> OPEN
@@ -181,6 +185,8 @@ public class CircuitBreakerInterceptor extends AnnotatedInterceptor<CircuitBreak
                 }
 
             }
+
+            return this;
         }
 
         boolean shouldOpen() {
